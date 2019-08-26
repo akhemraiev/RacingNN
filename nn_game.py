@@ -25,7 +25,7 @@ class Sensor:
     def update(self, position, direction):
         sensor_distance = 250
 
-        for i in range(sensor_distance):
+        for i in range(1, sensor_distance, 10):
             for pad in pads:
                 x = (int)(position[0] + math.cos(math.radians(-direction - 90 + self.angle)) * i)
                 y = (int)(position[1] + math.sin(math.radians(-direction - 90 + self.angle)) * i)
@@ -145,6 +145,8 @@ def draw_window(win, car_groups, cars):
 
 def eval_genomes(genomes, config):
 
+    tick_count = 0
+
     nets = []
     cars = []
     car_groups = []
@@ -164,9 +166,8 @@ def eval_genomes(genomes, config):
     start_ticks = pygame.time.get_ticks()  # starter tick
 
     while run and len(cars) > 0:
-
-        seconds = (pygame.time.get_ticks() - start_ticks) / 1000  # calculate how many seconds
-        if seconds > 40:  # if more than 10 seconds close the game
+        tick_count += 1
+        if tick_count > 1800:  # if more than 10 seconds close the game
             break
 
         deltat = clock.tick(30)
@@ -228,6 +229,14 @@ def eval_genomes(genomes, config):
 
         for x, car in enumerate(cars):
             ge[x].fitness += (cars[x].speed * 2)
+
+        for x, car in enumerate(cars):
+            if tick_count > 400 and ge[x].fitness < 1000:  # if more than 10 seconds close the game
+                nets.pop(x)
+                ge[x].fitness -= 1000
+                ge.pop(x)
+                cars.pop(x)
+                car_groups.pop(x)
 
         draw_window(WIN, car_groups, cars)
 
