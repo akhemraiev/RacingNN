@@ -92,14 +92,62 @@ pads = [
     ]
 pad_group = pygame.sprite.RenderPlain(*pads)
 
-def draw_window(win, car_group):
+def draw_sensor(win, car, angle, sensor_length):
+    x = car.position[0] + math.cos(math.radians(-car.direction - 90 + angle)) * sensor_length
+    y = car.position[1] + math.sin(math.radians(-car.direction - 90 + angle)) * sensor_length
+    pygame.draw.line(win, Color("red"), car.position, (x, y), 1)
+
+def draw_window(win, car_group, car):
     win.blit(bg_img, (0, 0))
+    sensor_lenth = 250
+    angle = 0
+    for i in range(sensor_lenth):
+        for pad in pads:
+            x = car.position[0] + math.cos(math.radians(-car.direction - 90 + angle)) * i
+            y = car.position[1] + math.sin(math.radians(-car.direction - 90 + angle)) * i
+            if rect_contains_point(pad.rect.topleft, pad.rect.center, (x, y)) and i < sensor_lenth:
+                sensor_lenth = i - 1
+
+    draw_sensor(win, car, 0, sensor_lenth)
+
+    sensor_lenth = 250
+    angle = 25
+    for i in range(sensor_lenth):
+        for pad in pads:
+            x = car.position[0] + math.cos(math.radians(-car.direction - 90 + angle)) * i
+            y = car.position[1] + math.sin(math.radians(-car.direction - 90 + angle)) * i
+            if rect_contains_point(pad.rect.topleft, pad.rect.center, (x, y)) and i < sensor_lenth:
+                sensor_lenth = i - 1
+
+    draw_sensor(win, car, angle, sensor_lenth)
+
+    sensor_lenth = 250
+    angle = -25
+    for i in range(sensor_lenth):
+        for pad in pads:
+            x = car.position[0] + math.cos(math.radians(-car.direction - 90 + angle)) * i
+            y = car.position[1] + math.sin(math.radians(-car.direction - 90 + angle)) * i
+            if rect_contains_point(pad.rect.topleft, pad.rect.center, (x, y)) and i < sensor_lenth:
+                sensor_lenth = i - 1
+
+    draw_sensor(win, car, angle, sensor_lenth)
+    # draw_sensor(win, car, 45, 300)
+    # draw_sensor(win, car, 90, 300)
+    # draw_sensor(win, car, -45, 300)
+    # draw_sensor(win, car, -90, 300)
 
     pad_group.draw(win)
     car_group.draw(win)
 
+
+
+
+
     pygame.display.flip()
 
+def rect_contains_point(top_left, center, point):
+    bottom_right = (center[0] + center[0] - top_left[0], center[1] + center[1] - top_left[1])
+    return point[0] >= top_left[0] and point[0] <= bottom_right[0] and point[1] >= top_left[1] and point[1] <= bottom_right[1]
 
 def main():
     car = CarSprite('images/car.png', (70, 700))
@@ -138,7 +186,7 @@ def main():
             car.k_right = 0
             car.k_left = 0
 
-        draw_window(WIN, car_group)
+        draw_window(WIN, car_group, car)
 
 
 main()
