@@ -1,6 +1,7 @@
 import pygame
 import math
 import os
+import neat
 from pygame.locals import *
 
 pygame.init()
@@ -8,7 +9,7 @@ clock = pygame.time.Clock()
 
 MIN_WIDTH = 1024
 MIN_HEIGHT = 768
-DRAW_SENSORS = True
+DRAW_SENSORS = False
 
 WIN = pygame.display.set_mode((MIN_WIDTH, MIN_HEIGHT))
 pygame.display.set_caption("Racing")
@@ -46,6 +47,7 @@ class CarSprite(pygame.sprite.Sprite):
         self.position = position
         self.speed = self.direction = 0
         self.k_left = self.k_right = self.k_down = self.k_up = 0
+        self.k_up = 5
         self.sensors = [Sensor(-90), Sensor(-45), Sensor(0), Sensor(45), Sensor(90)]
 
     def update(self, deltat):
@@ -126,29 +128,50 @@ def draw_sensor(win, car, angle, sensor_length):
     pygame.draw.line(win, Color("red"), car.rect.center, (x, y), 1)
 
 
-def draw_window(win, car_group, car):
+def draw_window(win, car_groups, cars):
     win.blit(bg_img, (0, 0))
 
     if DRAW_SENSORS:
-        for sensor in car.sensors:
-            draw_sensor(win, car, sensor.angle, sensor.distance)
+        for car in cars:
+            for sensor in car.sensors:
+                draw_sensor(win, car, sensor.angle, sensor.distance)
 
     pad_group.draw(win)
-    car_group.draw(win)
+    for car_group in car_groups:
+        car_group.draw(win)
 
     pygame.display.flip()
 
 
-def main():
-    car = CarSprite('images/car.png', (70, 700))
-    car_group = pygame.sprite.RenderPlain(car)
+def eval_genomes(genomes, config):
+
+    nets = []
+    cars = []
+    car_groups = []
+    ge = []
+
+    for genome_id, genome in genomes:
+        genome.fitness = 0  # start with fitness level of 0
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+        nets.append(net)
+        car = CarSprite('images/car.png', (70, 600))
+        cars.append(car)
+        car_groups.append(pygame.sprite.RenderPlain(car))
+        ge.append(genome)
+
 
     run = True
-    crashed = False
+    start_ticks = pygame.time.get_ticks()  # starter tick
 
-    while run and not crashed:
+    while run and len(cars) > 0:
+
+        seconds = (pygame.time.get_ticks() - start_ticks) / 1000  # calculate how many seconds
+        if seconds > 40:  # if more than 10 seconds close the game
+            break
+
         deltat = clock.tick(30)
-        car_group.update(deltat)
+        for car_group in car_groups:
+            car_group.update(deltat)
 
 
         for event in pygame.event.get():
@@ -167,16 +190,78 @@ def main():
             elif event.key == K_DOWN:
                 car.k_down = down * -2
 
-        collisions = pygame.sprite.groupcollide(car_group, pad_group, False, False, collided=None)
-        if collisions != {}:
-            crashed = True
-            car.image = pygame.image.load('images/collision.png')
-            car.MAX_FORWARD_SPEED = 0
-            car.MAX_REVERSE_SPEED = 0
-            car.k_right = 0
-            car.k_left = 0
+        for x, car in enumerate(cars):
+            params = []
+            for sensor in car.sensors:
+                params.append(sensor.distance)
+            params.append(car.speed)
+            inputs = (tuple(params))
+            output = nets[x].activate(inputs)
 
-        draw_window(WIN, car_group, car)
+            car.k_down = car.k_up = car.k_left = car.k_right = 0
+
+            if output[0] > 0.5:
+                car.k_right = -5
+
+            if output[1] > 0.5:
+                car.k_left = 5
+
+            if output[2] > 0.5:
+                car.k_up = 2
+
+            if output[3] > 0.5:
+                car.k_down = -2
+
+        for x, car_group in enumerate(car_groups):
+            collisions = pygame.sprite.groupcollide(car_group, pad_group, False, False, collided=None)
+            if collisions != {}:
+                car.image = pygame.image.load('images/collision.png')
+                car.MAX_FORWARD_SPEED = 0
+                car.MAX_REVERSE_SPEED = 0
+                car.k_right = 0
+                car.k_left = 0
+                nets.pop(x)
+                ge[x].fitness -= 1000
+                ge.pop(x)
+                cars.pop(x)
+                car_groups.pop(x)
+
+        for x, car in enumerate(cars):
+            ge[x].fitness += (cars[x].speed * 2)
+
+        draw_window(WIN, car_groups, cars)
 
 
-main()
+def run(config_file):
+    """
+    runs the NEAT algorithm to train a neural network to play flappy bird.
+    :param config_file: location of config file
+    :return: None
+    """
+    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                         neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                         config_file)
+
+    # Create the population, which is the top-level object for a NEAT run.
+    p = neat.Population(config)
+
+    # Add a stdout reporter to show progress in the terminal.
+    p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+    #p.add_reporter(neat.Checkpointer(5))
+
+    # Run for up to 50 generations.
+    winner = p.run(eval_genomes, 50)
+
+    # show final stats
+    print('\nBest genome:\n{!s}'.format(winner))
+
+
+if __name__ == '__main__':
+    # Determine path to configuration file. This path manipulation is
+    # here so that the script will run successfully regardless of the
+    # current working directory.
+    local_dir = os.path.dirname(__file__)
+    config_path = os.path.join(local_dir, 'config-feedforward.txt')
+    run(config_path)
