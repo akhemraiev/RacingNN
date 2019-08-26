@@ -64,6 +64,9 @@ class CarSprite(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(self.src_image, self.direction)
         self.rect = self.image.get_rect()
         self.rect.center = self.position
+        self.update_sensors()
+
+    def update_sensors(self):
         for sensor in self.sensors:
             sensor.update(self.rect.center, self.direction)
 
@@ -145,6 +148,8 @@ def main():
 
     while run and not crashed:
         deltat = clock.tick(30)
+        car_group.update(deltat)
+
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -161,10 +166,6 @@ def main():
                 car.k_up = down * 2
             elif event.key == K_DOWN:
                 car.k_down = down * -2
-
-        car_group.update(deltat)
-
-
 
         collisions = pygame.sprite.groupcollide(car_group, pad_group, False, False, collided=None)
         if collisions != {}:
