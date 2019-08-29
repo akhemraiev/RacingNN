@@ -9,7 +9,7 @@ clock = pygame.time.Clock()
 
 MIN_WIDTH = 1024
 MIN_HEIGHT = 768
-DRAW_SENSORS = False
+DRAW_SENSORS = True
 
 WIN = pygame.display.set_mode((MIN_WIDTH, MIN_HEIGHT))
 pygame.display.set_caption("Racing")
@@ -23,7 +23,7 @@ class Sensor:
         self.distance = 0
 
     def update(self, position, direction):
-        sensor_distance = 250
+        sensor_distance = 400
 
         for i in range(1, sensor_distance, 10):
             for pad in pads:
@@ -48,7 +48,7 @@ class CarSprite(pygame.sprite.Sprite):
         self.speed = self.direction = 0
         self.k_left = self.k_right = self.k_down = self.k_up = 0
         self.k_up = 5
-        self.sensors = [Sensor(-90), Sensor(-45), Sensor(0), Sensor(45), Sensor(90)]
+        self.sensors = [Sensor(-90), Sensor(-70), Sensor(-45), Sensor(-15), Sensor(0),Sensor(15), Sensor(45),Sensor(70), Sensor(90)]
 
     def update(self, deltat):
         # SIMULATION
@@ -163,7 +163,6 @@ def eval_genomes(genomes, config):
 
 
     run = True
-    start_ticks = pygame.time.get_ticks()  # starter tick
 
     while run and len(cars) > 0:
         tick_count += 1
@@ -222,16 +221,15 @@ def eval_genomes(genomes, config):
                 car.k_right = 0
                 car.k_left = 0
                 nets.pop(x)
-                ge[x].fitness -= 1000
                 ge.pop(x)
                 cars.pop(x)
                 car_groups.pop(x)
 
         for x, car in enumerate(cars):
-            ge[x].fitness += (cars[x].speed * 2)
+            ge[x].fitness += (cars[x].speed)
 
         for x, car in enumerate(cars):
-            if tick_count > 400 and ge[x].fitness < 1000:  # if more than 10 seconds close the game
+            if tick_count > 400 and (ge[x].fitness < 1000 or car.speed == 0):  # if more than 10 seconds close the game
                 nets.pop(x)
                 ge[x].fitness -= 1000
                 ge.pop(x)
