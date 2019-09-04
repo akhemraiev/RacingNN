@@ -44,7 +44,8 @@ class CarSprite(pygame.sprite.Sprite):
         self.sensors = []
         self.src_image = pygame.image.load(image)
         self.position = position
-        self.speed = self.direction = 0
+        self.direction = -90
+        self.speed = 0
         self.k_left = self.k_right = self.k_down = self.k_up = 0
         self.sensors = [Sensor(-90), Sensor(-45), Sensor(0), Sensor(45), Sensor(90)]
 
@@ -108,11 +109,18 @@ pads = [
     VerticalPad((10, 600)),
 
     VerticalPad((200, 400)),
-    HorizontalPad((450, 160)),
-    HorizontalPad((600, 160)),
 
-    HorizontalPad((600, 400)),
-    HorizontalPad((750, 400)),
+    VerticalPad((350, -37)),
+
+    HorizontalPad((600, 200)),
+    HorizontalPad((750, 200)),
+
+
+    HorizontalPad((450, 350)),
+    HorizontalPad((600, 350)),
+
+    HorizontalPad((600, 500)),
+    HorizontalPad((750, 500)),
 
     HorizontalPad((450, 640)),
     HorizontalPad((600, 640))
@@ -140,7 +148,7 @@ def draw_window(win, car_group, car):
 
 
 def main():
-    car = CarSprite('images/car.png', (70, 700))
+    car = CarSprite('images/car.png', (300, 730))
     car_group = pygame.sprite.RenderPlain(car)
 
     run = True
@@ -162,10 +170,13 @@ def main():
                 car.k_right = down * -5
             elif event.key == K_LEFT:
                 car.k_left = down * 5
-            elif event.key == K_UP:
-                car.k_up = down * 2
             elif event.key == K_DOWN:
                 car.k_down = down * -2
+
+            if event.key == K_UP:
+                car.k_up = down * 2
+            else:
+                car.k_down = -0.2
 
         collisions = pygame.sprite.groupcollide(car_group, pad_group, False, False, collided=None)
         if collisions != {}:

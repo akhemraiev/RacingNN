@@ -3,6 +3,8 @@ import math
 import os
 import neat
 from pygame.locals import *
+import pickle
+import random
 
 pygame.init()
 clock = pygame.time.Clock()
@@ -45,10 +47,11 @@ class CarSprite(pygame.sprite.Sprite):
         self.sensors = []
         self.src_image = pygame.image.load(image)
         self.position = position
-        self.speed = self.direction = 0
+        self.direction = -90
+        self.speed = 0
         self.k_left = self.k_right = self.k_down = self.k_up = 0
         self.k_up = 5
-        self.sensors = [Sensor(-90), Sensor(-70), Sensor(-45), Sensor(-15), Sensor(0),Sensor(15), Sensor(45),Sensor(70), Sensor(90)]
+        self.sensors = [Sensor(-90), Sensor(-70), Sensor(-45), Sensor(-20), Sensor(0),Sensor(20), Sensor(45),Sensor(70), Sensor(90)]
 
     def update(self, deltat):
         # SIMULATION
@@ -110,11 +113,18 @@ pads = [
     VerticalPad((10, 600)),
 
     VerticalPad((200, 400)),
-    HorizontalPad((450, 160)),
-    HorizontalPad((600, 160)),
 
-    HorizontalPad((600, 400)),
-    HorizontalPad((750, 400)),
+    VerticalPad((350, -37)),
+
+    HorizontalPad((600, 200)),
+    HorizontalPad((750, 200)),
+
+
+    HorizontalPad((450, 350)),
+    HorizontalPad((600, 350)),
+
+    HorizontalPad((600, 500)),
+    HorizontalPad((750, 500)),
 
     HorizontalPad((450, 640)),
     HorizontalPad((600, 640))
@@ -156,7 +166,8 @@ def eval_genomes(genomes, config):
         genome.fitness = 0  # start with fitness level of 0
         net = neat.nn.FeedForwardNetwork.create(genome, config)
         nets.append(net)
-        car = CarSprite('images/car.png', (70, 600))
+        y = random.randint(680, 730)
+        car = CarSprite('images/car.png', (300, y))
         cars.append(car)
         car_groups.append(pygame.sprite.RenderPlain(car))
         ge.append(genome)
@@ -208,6 +219,8 @@ def eval_genomes(genomes, config):
 
             if output[2] > 0.5:
                 car.k_up = 2
+            else:
+                car.k_down = -0.2
 
             if output[3] > 0.5:
                 car.k_down = -2
@@ -226,12 +239,11 @@ def eval_genomes(genomes, config):
                 car_groups.pop(x)
 
         for x, car in enumerate(cars):
-            ge[x].fitness += (cars[x].speed)
+            ge[x].fitness += cars[x].speed
 
         for x, car in enumerate(cars):
             if tick_count > 400 and (ge[x].fitness < 1000 or car.speed == 0):  # if more than 10 seconds close the game
                 nets.pop(x)
-                ge[x].fitness -= 1000
                 ge.pop(x)
                 cars.pop(x)
                 car_groups.pop(x)
@@ -259,7 +271,10 @@ def run(config_file):
     #p.add_reporter(neat.Checkpointer(5))
 
     # Run for up to 50 generations.
-    winner = p.run(eval_genomes, 50)
+    winner = p.run(eval_genomes, 500)
+
+    with open("winner.pickle", "wb") as f:
+        pickle.dump(winner, f)
 
     # show final stats
     print('\nBest genome:\n{!s}'.format(winner))
